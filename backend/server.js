@@ -11,6 +11,7 @@ const { google } = require('./config/authConfig')
 const authRoutes = require('./routes/auth')
 const userRoutes = require('./routes/users')
 const clientsRouter = require('./routes/clients')
+const adminRouter = require('./routes/admin')
 
 const app = express()
 
@@ -70,6 +71,7 @@ passport.deserializeUser(async (id, done) => {
 app.use('/auth', authRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/clients', clientsRouter)
+app.use('/api/admin', adminRouter)
 
 const PORT = process.env.PORT || 5000
 app.listen(PORT, () =>
