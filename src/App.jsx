@@ -1,39 +1,48 @@
 // src/App.jsx
 import React from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
-import SignIn from './components/Signin.jsx'
-import HomeClient from './pages/HomeClient.jsx'
-import Dashboard from './pages/Dashboard.jsx'
-import ProtectedRoute from './components/ProtectedRoute.jsx'
-
+import ProtectedRoute from './components/ProtectedRoute'
+import SignIn from './components/SignIn'
+import HomeClient from './pages/HomeClient'
+import AdminDashboard from './pages/AdminDashboard'
+import Dashboard from './pages/Dashboard'
 export default function App() {
   return (
     <Routes>
-      {/* public */}
+      {/* Public */}
       <Route path="/login" element={<SignIn />} />
 
-      {/* client onboarding */}
+      {/* Client */}
       <Route
         path="/homeclient"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requireRole="client">
             <HomeClient />
           </ProtectedRoute>
         }
       />
 
-      {/* post-onboarding dashboard */}
+      {/* Admin */}
       <Route
-        path="/dashboard"
+        path="/admindashboard"
         element={
-          <ProtectedRoute>
-            <Dashboard />
+          <ProtectedRoute requireRole="admin">
+            <AdminDashboard />
           </ProtectedRoute>
         }
       />
 
-      {/* catch-all → login */}
+      {/* Fallback */}
       <Route path="*" element={<Navigate to="/login" replace />} />
+
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute requireRole="client">
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
     </Routes>
   )
 }

@@ -3,20 +3,19 @@ import React, { useContext } from 'react'
 import { Navigate } from 'react-router-dom'
 import { AuthContext } from '../contexts/AuthContext'
 
-export default function ProtectedRoute({ children }) {
+export default function ProtectedRoute({ children, requireRole }) {
   const { user, loading } = useContext(AuthContext)
 
   if (loading) {
-    // still checking cookie/session
     return (
       <div className="flex items-center justify-center h-screen">Loading…</div>
     )
   }
-
   if (!user) {
-    // not logged in → back to sign-in
-    return <Navigate to="/" replace />
+    return <Navigate to="/login" replace />
   }
-
+  if (requireRole && user.role !== requireRole) {
+    return <Navigate to="/login" replace />
+  }
   return children
 }

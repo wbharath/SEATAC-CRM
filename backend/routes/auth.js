@@ -4,52 +4,61 @@ const passport = require('passport')
 const router = express.Router()
 const Step = require('../models/Step')
 
-// kick off Google OAuth
-router.get(
-  '/google',
-  passport.authenticate('google', { scope: ['profile', 'email'] })
-)
+// 1) Kick off OAuth, stash role in session via `state`
+router.get('/google', (req, res, next) => {
+  // Default to "client", unless ?role=admin is present
+  const role = req.query.role === 'admin' ? 'admin' : 'client'
+  passport.authenticate('google', {
+    scope: ['profile', 'email'],
+    state: role
+  })(req, res, next)
+})
 
-// Google OAuth callback
+// 2) Single callback for both flows
 router.get(
   '/google/callback',
   passport.authenticate('google', { failureRedirect: '/auth/failure' }),
   async (req, res) => {
-    try {
-      // Seed 7 step documents if none exist for this user
-      const existing = await Step.countDocuments({ client: req.user._id })
-      if (existing === 0) {
-        const seeds = Array.from({ length: 7 }, (_, i) => ({
-          client: req.user._id,
-          number: i + 1,
-          data: {},
-          status: 'pending',
-          updatedAt: new Date(),
-          kind: `step${i + 1}` // if you’re using discriminators
-        }))
-        await Step.insertMany(seeds)
+    // 2a) For clients: seed 7 onboarding steps if new
+    if (req.query.state === 'client') {
+      try {
+        const count = await Step.countDocuments({ client: req.user._id })
+        if (count === 0) {
+          const seeds = Array.from({ length: 7 }, (_, i) => ({
+            client: req.user._id,
+            number: i + 1,
+            data: {},
+            status: 'pending',
+            updatedAt: new Date()
+          }))
+          await Step.insertMany(seeds)
+        }
+      } catch (err) {
+        console.error('Seeding steps error:', err)
       }
-    } catch (err) {
-      console.error('Error seeding steps on login:', err)
-      // proceed anyway
     }
 
-    // Redirect into your client home with a login flag
-    res.redirect('http://localhost:5173/homeclient?login=success')
+    // 2b) If state=admin, elevate and save
+    if (req.query.state === 'admin') {
+      req.user.role = 'admin'
+      await req.user.save()
+      return res.redirect('http://localhost:5173/admindashboard?login=success')
+    }
+
+    // 2c) Otherwise it’s a normal client
+    return res.redirect('http://localhost:5173/homeclient?login=success')
   }
 )
 
 router.get('/failure', (req, res) => res.send('Google login failed'))
 
-// return logged-in user
-router.get('/user', (req, res) => {
-  res.json(req.user || null)
-})
+// return current user or null
+router.get('/user', (req, res) => res.json(req.user || null))
 
-// logout
+// logout → back to sign-in
 router.get('/logout', (req, res) => {
   req.logout(() => {
-    res.redirect('http://localhost:3000')
+    res.redirect('http://localhost:5173/login')
   })
 })
 
