@@ -12,115 +12,186 @@ import Step5 from './steps/Step5'
 import Step6 from './steps/Step6'
 import Step7 from './steps/Step7'
 
-const Steps = [Step1, Step2, Step3, Step4, Step5, Step6, Step7]
+const STEPS = [Step1, Step2, Step3, Step4, Step5, Step6, Step7]
+const STEP_TITLES = [
+  'Company Information',
+  'Point of Contact',
+  'Technology Access Centres',
+  'Innovation Challenge',
+  'Project Timeline',
+  'Company’s R&D/Innovation History',
+  'Finalize Submission'
+]
 
 export default function MultiStepForm() {
-  const { user } = useContext(AuthContext)
+  const { user, loading: authLoading } = useContext(AuthContext)
   const navigate = useNavigate()
+
+  // how many steps the admin has granted you
+  const allowedStep = user?.allowedStep ?? 1
+
   const [stepsData, setStepsData] = useState([])
   const [current, setCurrent] = useState(1)
+  const [busy, setBusy] = useState(false)
 
+  // Fetch once on login/mount
   useEffect(() => {
-    if (user) fetchSteps()
-  }, [user])
+    if (authLoading || !user) return
 
-  async function fetchSteps() {
-    const res = await fetch('/api/clients/onboarding', {
-      credentials: 'include'
-    })
-    if (!res.ok) {
-      console.error(await res.text())
-      return
+    fetch('/api/clients/onboarding', { credentials: 'include' })
+      .then((r) => {
+        if (!r.ok) throw new Error('Cannot load steps')
+        return r.json()
+      })
+      .then((data) => {
+        setStepsData(data)
+        // start at the first pending step, but no further than allowedStep
+        const firstPending =
+          data.find((s) => s.status === 'pending')?.number || 1
+        setCurrent(Math.min(firstPending, allowedStep))
+      })
+      .catch((err) => {
+        console.error(err)
+        toast.error('Failed to load steps')
+      })
+  }, [authLoading, user, allowedStep])
+
+  // Grab current step info
+  const stepInfo = stepsData.find((s) => s.number === current) || {
+    number: current,
+    status: 'pending',
+    data: {}
+  }
+  const { status, data } = stepInfo
+  const isPending = status === 'pending'
+  const Active = STEPS[current - 1]
+
+  // Save helper
+  async function saveStep(formData) {
+    setBusy(true)
+    try {
+      const res = await fetch(`/api/clients/step/${current}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ data: formData })
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Save failed')
+      }
+      toast.success('Step saved—awaiting approval')
+      // update local so Next unlocks
+      setStepsData((all) =>
+        all.map((s) =>
+          s.number === current
+            ? { ...s, status: 'submitted', data: formData }
+            : s
+        )
+      )
+      return true
+    } catch (err) {
+      console.error(err)
+      toast.error(err.message)
+      return false
+    } finally {
+      setBusy(false)
     }
-    const data = await res.json()
-    setStepsData(data)
-    setCurrent(data.find((s) => s.status === 'pending')?.number || 1)
   }
 
+  // “Next” handler: save if needed then advance
+  async function goNext(e) {
+    e?.preventDefault()
+    if (isPending) {
+      // serialize and save
+      const formEl = document.querySelector('form')
+      const payload = Object.fromEntries(new FormData(formEl).entries())
+      const ok = await saveStep(payload)
+      if (!ok) return
+    }
+    // advance only if below allowedStep
+    if (current < allowedStep) {
+      setCurrent((c) => c + 1)
+    } else {
+      toast.info(`You only have access through step ${allowedStep}`)
+    }
+  }
+
+  // “Submit” handler on the final allowed step
   async function handleSubmit(e) {
     e.preventDefault()
-    const payload = Object.fromEntries(new FormData(e.target).entries())
-    const res = await fetch(`/api/clients/step/${current}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ data: payload })
-    })
-    if (!res.ok) {
-      const err = await res.json()
-      return toast.error(err.error)
-    }
-    toast.success('Step submitted—awaiting approval')
-
-    // if this was the very last step, go to dashboard
-    if (current === Steps.length) {
+    if (!isPending) return
+    const formEl = e.target
+    const payload = Object.fromEntries(new FormData(formEl).entries())
+    const ok = await saveStep(payload)
+    if (ok && current === allowedStep) {
       navigate('/dashboard', { replace: true })
-    } else {
-      fetchSteps()
     }
   }
 
-  const stepInfo = stepsData.find((s) => s.number === current) || {}
-  const status = stepInfo.status
-  const data = stepInfo.data || {}
-  const Active = Steps[current - 1] || (() => <p>Step not found</p>)
+  // Loading
+  if (authLoading || !stepsData.length) {
+    return <div className="text-center py-16">Loading…</div>
+  }
 
   return (
-    <div className="max-w-4xl mx-auto my-8">
-      {/* PROGRESS BAR */}
+    <div className="max-w-3xl mx-auto my-8">
+      {/* Progress Bar */}
       <div className="h-2 bg-gray-200 rounded overflow-hidden mb-6">
         <div
-          className="h-full bg-blue-500 transition-all"
-          style={{
-            width: stepsData.length
-              ? `${(current / stepsData.length) * 100}%`
-              : '0%'
-          }}
+          className="h-full bg-blue-500"
+          style={{ width: `${(allowedStep / STEPS.length) * 100}%` }}
         />
       </div>
 
-      {/* FORM CARD */}
       <div className="bg-white shadow rounded-lg p-6 space-y-6">
-        <h2 className="text-xl font-semibold">Step {current}</h2>
+        <h2 className="text-xl font-semibold">
+          Step {current}: {STEP_TITLES[current - 1]}
+        </h2>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* render current step component */}
           <Active data={data} />
 
-          {/* PREVIOUS / SUBMIT / NEXT */}
-          <div className="flex justify-end space-x-2">
+          <div className="flex justify-between items-center">
+            {/* Previous */}
             <button
               type="button"
-              onClick={() => setCurrent((c) => Math.max(1, c - 1))}
+              onClick={() => current > 1 && setCurrent((c) => c - 1)}
               disabled={current === 1}
-              className={`px-4 py-2 rounded ${
+              className={`px-4 py-2 rounded text-white ${
                 current === 1
-                  ? 'bg-gray-300 text-gray-700 cursor-not-allowed'
-                  : 'bg-gray-200 hover:bg-gray-300'
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-gray-600 hover:bg-gray-700'
               }`}
             >
               Previous
             </button>
 
-            {status === 'pending' ? (
+            {/* Next vs Submit */}
+            {current < allowedStep ? (
               <button
-                type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+                type="button"
+                onClick={goNext}
+                disabled={busy}
+                className={`px-4 py-2 rounded text-white ${
+                  busy
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700'
+                }`}
               >
-                {current === Steps.length ? 'Finish Onboarding' : 'Submit'}
+                {busy ? 'Saving…' : 'Next'}
               </button>
             ) : (
               <button
-                type="button"
-                onClick={() => setCurrent((c) => Math.min(Steps.length, c + 1))}
-                disabled={status !== 'approved'}
-                className={`px-4 py-2 rounded ${
-                  status === 'approved'
-                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'bg-gray-300 text-gray-700 cursor-not-allowed'
+                type="submit"
+                disabled={busy}
+                className={`px-4 py-2 rounded text-white ${
+                  busy
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-green-600 hover:bg-green-700'
                 }`}
               >
-                Next
+                {busy ? 'Saving…' : 'Submit'}
               </button>
             )}
           </div>

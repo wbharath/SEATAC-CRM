@@ -13,7 +13,7 @@ import Step5 from '../components/steps/Step5.jsx'
 import Step6 from '../components/steps/Step6.jsx'
 import Step7 from '../components/steps/Step7.jsx'
 
-const stepTitles = [
+const STEP_TITLES = [
   'Company Information',
   'Point of Contact',
   'Technology Access Centres',
@@ -25,12 +25,33 @@ const stepTitles = [
 
 const Steps = [Step1, Step2, Step3, Step4, Step5, Step6, Step7]
 
+// Tailwind classes for each status
+const borderColor = {
+  pending: 'border-l-gray-300',
+  submitted: 'border-l-yellow-400',
+  approved: 'border-l-green-400',
+  rejected: 'border-l-red-400'
+}
+const bgColor = {
+  pending: 'bg-gray-50',
+  submitted: 'bg-yellow-50',
+  approved: 'bg-green-50',
+  rejected: 'bg-red-50'
+}
+const badgeColor = {
+  pending: 'bg-gray-200 text-gray-700',
+  submitted: 'bg-yellow-300 text-yellow-900',
+  approved: 'bg-green-300 text-green-900',
+  rejected: 'bg-red-300 text-red-900'
+}
+
 export default function Dashboard() {
-  const { user } = useContext(AuthContext)
+  const { user, loading: authLoading } = useContext(AuthContext)
   const [stepsData, setStepsData] = useState([])
   const [editing, setEditing] = useState(null)
   const navigate = useNavigate()
 
+  // load steps
   useEffect(() => {
     if (!user) return
     fetch('/api/clients/onboarding', { credentials: 'include' })
@@ -38,107 +59,115 @@ export default function Dashboard() {
         if (!res.ok) throw new Error('Could not load onboarding steps')
         return res.json()
       })
-      .then((data) => setStepsData(data))
-      .catch((err) => toast.error(err.message))
+      .then(setStepsData)
+      .catch((err) => {
+        console.error(err)
+        toast.error('Failed to load steps')
+      })
   }, [user])
 
-  const handleCardClick = (step) => {
-    // if (step.status !== 'approved') {
-    //   return toast.info('Step must be approved before editing')
-    // }
-    setEditing(step.number)
-  }
-
-  const saveStep = async (stepNum, data) => {
-    const res = await fetch(`/api/clients/step/${stepNum}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ data })
-    })
-    if (!res.ok) {
-      const err = await res.json()
-      return toast.error(err.error)
-    }
-    toast.success('Saved!')
-    setEditing(null)
-    // refresh data
-    const updated = await fetch('/api/clients/onboarding', {
-      credentials: 'include'
-    })
-    setStepsData(await updated.json())
-  }
-
-  if (!stepsData.length) {
-    return <p className="p-8 text-center">Loading…</p>
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">Loading…</div>
+    )
   }
 
   return (
     <>
       <Navbar />
-      <div className="p-8 max-w-6xl mx-auto space-y-6">
-        <h1 className="text-3xl font-bold">Onboarding Dashboard</h1>
-        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-          {stepsData.map((step) => {
-            let colorClasses = 'bg-gray-50 border-gray-200'
-            if (step.status === 'submitted')
-              colorClasses = 'bg-yellow-50 border-yellow-300'
-            if (step.status === 'approved')
-              colorClasses = 'bg-green-50 border-green-300'
 
-            return (
-              <div
-                key={step.number}
-                onClick={() => handleCardClick(step)}
-                className={`cursor-pointer p-4 border rounded-lg shadow-sm hover:shadow-md transition ${colorClasses}`}
-              >
-                <h2 className="text-xl font-semibold mb-1">
-                  Step {step.number}
-                </h2>
-                <p className="text-gray-700 font-medium">
-                  {stepTitles[step.number - 1]}
-                </p>
-                <p className="text-sm text-gray-500">
-                  Status:{' '}
-                  <span className="font-semibold">
-                    {step.status.charAt(0).toUpperCase() + step.status.slice(1)}
-                  </span>
-                </p>
+      <div className="p-8 max-w-7xl mx-auto">
+        <h1 className="text-3xl font-bold mb-8">Onboarding Dashboard</h1>
+
+        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          {stepsData.map((step) => (
+            <div
+              key={step.number}
+              onClick={() => setEditing(step.number)}
+              className={`
+                cursor-pointer
+                ${borderColor[step.status]} ${bgColor[step.status]}
+                rounded-2xl p-6 shadow hover:shadow-lg
+                transform hover:-translate-y-1 transition
+              `}
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">
+                    Step {step.number}
+                  </h2>
+                  <p className="mt-1 text-gray-700">
+                    {STEP_TITLES[step.number - 1]}
+                  </p>
+                </div>
+                <span
+                  className={`inline-block px-3 py-1 text-xs font-medium rounded-full ${
+                    badgeColor[step.status]
+                  }`}
+                >
+                  {step.status.charAt(0).toUpperCase() + step.status.slice(1)}
+                </span>
               </div>
-            )
-          })}
+            </div>
+          ))}
         </div>
 
+        {/* EDIT PANEL */}
         {editing && (
-          <div className="mt-8 bg-white p-6 rounded-lg shadow-lg">
-            <h2 className="text-xl font-semibold mb-4">
-              Edit: {stepTitles[editing - 1]}
+          <div className="mt-10 bg-white p-8 rounded-2xl shadow-xl">
+            <button
+              onClick={() => setEditing(null)}
+              className="text-blue-600 hover:underline mb-4"
+            >
+              ← Back to steps
+            </button>
+
+            <h2 className="text-2xl font-bold mb-4">
+              Step {editing}: {STEP_TITLES[editing - 1]}
             </h2>
+
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault()
                 const formData = Object.fromEntries(
                   new FormData(e.target).entries()
                 )
-                saveStep(editing, formData)
+                const res = await fetch(`/api/clients/step/${editing}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  credentials: 'include',
+                  body: JSON.stringify({ data: formData })
+                })
+                if (!res.ok) {
+                  const err = await res.json()
+                  return toast.error(err.error)
+                }
+                toast.success('Saved!')
+                setEditing(null)
+                // reload
+                const fresh = await fetch('/api/clients/onboarding', {
+                  credentials: 'include'
+                })
+                setStepsData(await fresh.json())
               }}
               className="space-y-6"
             >
+              {/* render the form fields */}
               {React.createElement(Steps[editing - 1], {
                 data: stepsData.find((s) => s.number === editing)?.data || {}
               })}
 
-              <div className="flex justify-end space-x-2">
+              <div className="flex justify-end space-x-4">
                 <button
                   type="button"
                   onClick={() => setEditing(null)}
-                  className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+                  className="px-6 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
                 >
                   Save Changes
                 </button>

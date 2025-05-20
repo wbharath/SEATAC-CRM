@@ -65,33 +65,32 @@ const TAC_OPTIONS = [
   'TBT – TransBIOTech (Cégep de Lévis-Lauzon), Lévis, QC'
 ]
 
-export default function Step3({ data }) {
-  const [knowTAC, setKnowTAC] = useState(data.knowTAC || '')
-  const [selected, setSelected] = useState(data.selectedTAC || '')
-
-  // initialize if coming back from DB
-  useEffect(() => {
-    if (data.knowTAC) setKnowTAC(data.knowTAC)
-    if (data.selectedTAC) setSelected(data.selectedTAC)
-  }, [data])
+export default function Step3({ data = {} }) {
+  // initialize only once from props
+  const [knowTAC, setKnowTAC]         = useState(data.knowTAC || '')
+  const [selectedTAC, setSelectedTAC] = useState(data.selectedTAC || '')
 
   return (
     <div className="space-y-6">
       <hr className="border-gray-300" />
 
-      {/* Yes / No */}
+      {/* — Yes / No — */}
       <fieldset className="space-y-2">
         <legend className="text-sm font-semibold text-gray-800">
           I know which TAC I would like to work with?*
         </legend>
         <div className="flex items-center space-x-6">
           {['Yes', 'No'].map((opt) => (
-            <label key={opt} className="flex items-center">
+            <label
+              key={opt}
+              className="flex items-center cursor-pointer"
+              onClick={() => setKnowTAC(opt)}
+            >
               <input
                 type="radio"
                 name="knowTAC"
                 value={opt}
-                defaultChecked={data.knowTAC === opt}
+                checked={knowTAC === opt}
                 onChange={() => setKnowTAC(opt)}
                 className="form-radio h-4 w-4 text-blue-600"
                 required
@@ -102,44 +101,33 @@ export default function Step3({ data }) {
         </div>
       </fieldset>
 
-      {/* Custom dropdown, only if “Yes” */}
+      {/* — Only show when “Yes” — */}
       {knowTAC === 'Yes' && (
-        <div className="space-y-1">
-          <label className="block text-sm font-semibold text-gray-800">
+        <label className="block space-y-1">
+          <span className="text-sm font-semibold text-gray-800">
             I am interested in working with:*
-          </label>
-          <Listbox name="selectedTAC" value={selected} onChange={setSelected}>
-            <div className="relative">
-              <Listbox.Button className="w-full border border-gray-300 rounded-md p-2 flex justify-between items-center">
-                <span className={selected ? 'text-gray-900' : 'text-gray-400'}>
-                  {selected || '-- Select the TAC you want --'}
-                </span>
-                <ChevronUpDownIcon className="h-5 w-5 text-gray-500" />
-              </Listbox.Button>
-              <Listbox.Options className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md max-h-60 overflow-auto shadow-lg">
-                {TAC_OPTIONS.map((opt) => (
-                  <Listbox.Option
-                    key={opt}
-                    value={opt}
-                    className={({ active }) =>
-                      `${
-                        active ? 'bg-blue-100 text-blue-900' : 'text-gray-800'
-                      } cursor-pointer select-none p-2`
-                    }
-                  >
-                    {opt}
-                  </Listbox.Option>
-                ))}
-              </Listbox.Options>
-            </div>
-          </Listbox>
-        </div>
+          </span>
+          <select
+            name="selectedTAC"
+            value={selectedTAC}
+            onChange={(e) => setSelectedTAC(e.target.value)}
+            className="mt-1 block w-full border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
+            required
+          >
+            <option value="">— Select the TAC you want —</option>
+            {TAC_OPTIONS.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
+        </label>
       )}
 
-      {/* Finally, put hidden inputs so your form serialization still works */}
+      {/* hidden fields so your form still serializes these values */}
       <input type="hidden" name="knowTAC" value={knowTAC} />
       {knowTAC === 'Yes' && (
-        <input type="hidden" name="selectedTAC" value={selected} />
+        <input type="hidden" name="selectedTAC" value={selectedTAC} />
       )}
     </div>
   )

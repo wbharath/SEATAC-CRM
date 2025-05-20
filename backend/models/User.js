@@ -18,6 +18,7 @@ const userSchema = new mongoose.Schema({
   email: { type: String, unique: true },
   photo: String,
   role: { type: String, enum: ['client', 'admin'], default: 'client' },
+  allowedStep: { type: Number, default: 1 },
   onboarding: { type: [stepSchema], default: [] },
   createdAt: { type: Date, default: Date.now }
 })
