@@ -19,6 +19,8 @@ router.get(
   '/google/callback',
   passport.authenticate('google', { failureRedirect: '/auth/failure' }),
   async (req, res) => {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173'
+
     // 2a) For clients: seed 7 onboarding steps if new
     if (req.query.state === 'client') {
       try {
@@ -42,11 +44,11 @@ router.get(
     if (req.query.state === 'admin') {
       req.user.role = 'admin'
       await req.user.save()
-      return res.redirect('http://localhost:5173/admindashboard?login=success')
+      return res.redirect(`${frontendUrl}/admindashboard?login=success`)
     }
 
-    // 2c) Otherwise it’s a normal client
-    return res.redirect('http://localhost:5173/homeclient?login=success')
+    // 2c) Otherwise it's a normal client
+    return res.redirect(`${frontendUrl}/homeclient?login=success`)
   }
 )
 
@@ -57,8 +59,9 @@ router.get('/user', (req, res) => res.json(req.user || null))
 
 // logout → back to sign-in
 router.get('/logout', (req, res) => {
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173'
   req.logout(() => {
-    res.redirect('http://localhost:5173/login')
+    res.redirect(`${frontendUrl}/login`)
   })
 })
 
