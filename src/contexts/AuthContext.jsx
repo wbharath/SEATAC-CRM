@@ -1,5 +1,5 @@
-// src/contexts/AuthContext.jsx
 import React, { createContext, useEffect, useState } from 'react'
+import API_URL from '../utils/api'
 
 export const AuthContext = createContext()
 
@@ -8,7 +8,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/auth/user', { credentials: 'include' })
+    fetch(`${API_URL}/auth/user`, { credentials: 'include' })
       .then((res) => {
         if (res.ok) return res.json()
         throw new Error('Not authenticated')

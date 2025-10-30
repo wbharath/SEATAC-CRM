@@ -1,8 +1,9 @@
-// src/components/MultiStepForm.jsx
+
 import React, { useState, useEffect, useContext } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AuthContext } from '../contexts/AuthContext'
 import { toast } from 'react-toastify'
+import API_URL from '../utils/api'
 
 import Step1 from './steps/Step1'
 import Step2 from './steps/Step2'
@@ -19,7 +20,7 @@ const STEP_TITLES = [
   'Technology Access Centres',
   'Innovation Challenge',
   'Project Timeline',
-  'Company’s R&D/Innovation History',
+  'Company R&D/Innovation History',
   'Finalize Submission'
 ]
 
@@ -27,25 +28,22 @@ export default function MultiStepForm() {
   const { user, loading: authLoading } = useContext(AuthContext)
   const navigate = useNavigate()
 
-  // how many steps the admin has granted you
   const allowedStep = user?.allowedStep ?? 1
 
   const [stepsData, setStepsData] = useState([])
   const [current, setCurrent] = useState(1)
   const [busy, setBusy] = useState(false)
 
-  // Fetch once on login/mount
   useEffect(() => {
     if (authLoading || !user) return
 
-    fetch('/api/clients/onboarding', { credentials: 'include' })
+    fetch(`${API_URL}/api/clients/onboarding`, { credentials: 'include' })
       .then((r) => {
         if (!r.ok) throw new Error('Cannot load steps')
         return r.json()
       })
       .then((data) => {
         setStepsData(data)
-        // start at the first pending step, but no further than allowedStep
         const firstPending =
           data.find((s) => s.status === 'pending')?.number || 1
         setCurrent(Math.min(firstPending, allowedStep))
@@ -56,7 +54,6 @@ export default function MultiStepForm() {
       })
   }, [authLoading, user, allowedStep])
 
-  // Grab current step info
   const stepInfo = stepsData.find((s) => s.number === current) || {
     number: current,
     status: 'pending',
@@ -66,11 +63,10 @@ export default function MultiStepForm() {
   const isPending = status === 'pending'
   const Active = STEPS[current - 1]
 
-  // Save helper
   async function saveStep(formData) {
     setBusy(true)
     try {
-      const res = await fetch(`/api/clients/step/${current}`, {
+      const res = await fetch(`${API_URL}/api/clients/step/${current}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -81,7 +77,6 @@ export default function MultiStepForm() {
         throw new Error(err.error || 'Save failed')
       }
       toast.success('Step saved—awaiting approval')
-      // update local so Next unlocks
       setStepsData((all) =>
         all.map((s) =>
           s.number === current
@@ -99,17 +94,14 @@ export default function MultiStepForm() {
     }
   }
 
-  // “Next” handler: save if needed then advance
   async function goNext(e) {
     e?.preventDefault()
     if (isPending) {
-      // serialize and save
       const formEl = document.querySelector('form')
       const payload = Object.fromEntries(new FormData(formEl).entries())
       const ok = await saveStep(payload)
       if (!ok) return
     }
-    // advance only if below allowedStep
     if (current < allowedStep) {
       setCurrent((c) => c + 1)
     } else {
@@ -117,7 +109,6 @@ export default function MultiStepForm() {
     }
   }
 
-  // “Submit” handler on the final allowed step
   async function handleSubmit(e) {
     e.preventDefault()
     if (!isPending) return
@@ -129,14 +120,12 @@ export default function MultiStepForm() {
     }
   }
 
-  // Loading
   if (authLoading || !stepsData.length) {
     return <div className="text-center py-16">Loading…</div>
   }
 
   return (
     <div className="max-w-3xl mx-auto my-8">
-      {/* Progress Bar */}
       <div className="h-2 bg-gray-200 rounded overflow-hidden mb-6">
         <div
           className="h-full bg-blue-500"
@@ -153,7 +142,6 @@ export default function MultiStepForm() {
           <Active data={data} />
 
           <div className="flex justify-between items-center">
-            {/* Previous */}
             <button
               type="button"
               onClick={() => current > 1 && setCurrent((c) => c - 1)}
@@ -167,7 +155,6 @@ export default function MultiStepForm() {
               Previous
             </button>
 
-            {/* Next vs Submit */}
             {current < allowedStep ? (
               <button
                 type="button"

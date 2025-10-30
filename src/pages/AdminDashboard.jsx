@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react'
 import { toast } from 'react-toastify'
 import Navbar from '../components/Navbar'
+import API_URL from '../utils/api'
 
 const STEP_TITLES = [
   'Company Information',
@@ -9,7 +10,7 @@ const STEP_TITLES = [
   'Technology Access Centres',
   'Innovation Challenge',
   'Project Timeline',
-  'Company’s R&D/Innovation History',
+  'Company R&D/Innovation History',
   'Finalize Submission'
 ]
 
@@ -27,7 +28,7 @@ export default function AdminDashboard() {
 
   // 1️⃣ Load all clients (including their allowedStep)
   useEffect(() => {
-    fetch('/api/admin/clients', { credentials: 'include' })
+    fetch(`${API_URL}/api/admin/clients`, { credentials: 'include' })
       .then((r) => {
         if (!r.ok) throw new Error('Could not load clients')
         return r.json()
@@ -42,7 +43,7 @@ export default function AdminDashboard() {
     setSelected(client)
     setSteps([])
 
-    fetch(`/api/admin/clients/${id}/steps`, { credentials: 'include' })
+    fetch(`${API_URL}/api/admin/clients/${id}/steps`, { credentials: 'include' })
       .then((r) => {
         if (!r.ok) throw new Error('Could not load steps')
         return r.json()
@@ -54,7 +55,7 @@ export default function AdminDashboard() {
   // 3️⃣ Increase their allowedStep
   function updateAllowed(e) {
     const newAllowed = parseInt(e.target.value, 10)
-    fetch(`/api/admin/clients/${selectedClient._id}/allow/${newAllowed}`, {
+    fetch(`${API_URL}/api/admin/clients/${selectedClient._id}/allow/${newAllowed}`, {
       method: 'POST',
       credentials: 'include'
     })
@@ -119,7 +120,7 @@ export default function AdminDashboard() {
             </button>
 
             <h1 className="text-2xl font-bold mb-4">
-              {selectedClient.name}’s Onboarding
+              {selectedClient.name}'s Onboarding
             </h1>
 
             {/* show current allowed and only allow bumping past it */}

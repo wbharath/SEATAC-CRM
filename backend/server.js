@@ -1,13 +1,14 @@
 // backend/server.js
-require('dotenv').config()
+require('dotenv').config() // Load .env FIRST
+
 const express = require('express')
 const session = require('express-session')
 const passport = require('passport')
 const GoogleStrategy = require('passport-google-oauth20').Strategy
 const cors = require('cors')
 
-require('./config/db') // your MongoDB connection
-const { google } = require('./config/authConfig')
+require('./config/db') // MongoDB connection
+
 const authRoutes = require('./routes/auth')
 const userRoutes = require('./routes/users')
 const clientsRouter = require('./routes/clients')
@@ -16,10 +17,19 @@ const adminRouter = require('./routes/admin')
 const app = express()
 
 // CORS for Vite proxy origin
+// backend/server.js
 app.use(
   cors({
-    origin: ['http://localhost:5173', 'http://localhost:3000'],
-    credentials: true
+    origin: [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'https://seatac-crm-frontend.vercel.app', // ← Add your actual Vercel URL here
+      'https://seatac-crm-frontend-git-main-yourname.vercel.app', // Preview deployments
+      'https://seatac-crm-frontend-yourname.vercel.app' // Production URL variants
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
   })
 )
 
@@ -30,7 +40,7 @@ app.use(express.urlencoded({ extended: true }))
 // session + passport
 app.use(
   session({
-    secret: 'seatac-secret',
+    secret: process.env.SESSION_SECRET || 'seatac-secret',
     resave: false,
     saveUninitialized: false
   })
@@ -38,13 +48,13 @@ app.use(
 app.use(passport.initialize())
 app.use(passport.session())
 
-// Google OAuth setup
+// Google OAuth setup - Use environment variables DIRECTLY
 passport.use(
   new GoogleStrategy(
     {
-      clientID: google.clientID,
-      clientSecret: google.clientSecret,
-      callbackURL: google.callbackURL
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: process.env.GOOGLE_CALLBACK_URL_CLIENT
     },
     async (accessToken, refreshToken, profile, done) => {
       const User = require('./models/User')
@@ -60,6 +70,7 @@ passport.use(
     }
   )
 )
+
 passport.serializeUser((u, done) => done(null, u.id))
 passport.deserializeUser(async (id, done) => {
   const User = require('./models/User')

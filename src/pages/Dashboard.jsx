@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import Navbar from '../components/Navbar.jsx'
 import { AuthContext } from '../contexts/AuthContext.jsx'
+import API_URL from '../utils/api'
 
 import Step1 from '../components/steps/Step1.jsx'
 import Step2 from '../components/steps/Step2.jsx'
@@ -19,7 +20,7 @@ const STEP_TITLES = [
   'Technology Access Centres',
   'Innovation Challenge',
   'Project Timeline',
-  'Company’s R&D/Innovation History',
+  'Company R&D/Innovation History',
   'Finalize Submission'
 ]
 
@@ -54,7 +55,7 @@ export default function Dashboard() {
   // load steps
   useEffect(() => {
     if (!user) return
-    fetch('/api/clients/onboarding', { credentials: 'include' })
+    fetch(`${API_URL}/api/clients/onboarding`, { credentials: 'include' })
       .then((res) => {
         if (!res.ok) throw new Error('Could not load onboarding steps')
         return res.json()
@@ -132,12 +133,15 @@ export default function Dashboard() {
                 const formData = Object.fromEntries(
                   new FormData(e.target).entries()
                 )
-                const res = await fetch(`/api/clients/step/${editing}`, {
-                  method: 'PATCH',
-                  headers: { 'Content-Type': 'application/json' },
-                  credentials: 'include',
-                  body: JSON.stringify({ data: formData })
-                })
+                const res = await fetch(
+                  `${API_URL}/api/clients/step/${editing}`,
+                  {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ data: formData })
+                  }
+                )
                 if (!res.ok) {
                   const err = await res.json()
                   return toast.error(err.error)
@@ -145,7 +149,7 @@ export default function Dashboard() {
                 toast.success('Saved!')
                 setEditing(null)
                 // reload
-                const fresh = await fetch('/api/clients/onboarding', {
+                const fresh = await fetch(`${API_URL}/api/clients/onboarding`, {
                   credentials: 'include'
                 })
                 setStepsData(await fresh.json())
