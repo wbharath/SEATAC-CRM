@@ -2,6 +2,7 @@
 import React from 'react'
 import { FcGoogle } from 'react-icons/fc'
 import seatacLogo from '../assets/seatac.webp'
+import API_URL from '../utils/api'
 
 export default function SignIn() {
   return (
@@ -25,8 +26,9 @@ export default function SignIn() {
         </div>
 
         {/* Client login */}
+
         <a
-          href="/auth/google?role=client"
+          href={`${API_URL}/auth/google?role=client`}
           className="w-full flex items-center justify-center py-3 px-5 bg-white border border-gray-300 rounded-md hover:shadow transition"
         >
           <FcGoogle className="w-6 h-6 mr-3" />
@@ -34,8 +36,9 @@ export default function SignIn() {
         </a>
 
         {/* Admin login */}
+
         <a
-          href="/auth/google?role=admin"
+          href={`${API_URL}/auth/google?role=admin`}
           className="w-full flex items-center justify-center py-3 px-5 bg-red-600 text-white rounded-md hover:bg-red-700 transition"
         >
           <FcGoogle className="w-6 h-6 mr-3" />
@@ -58,7 +61,7 @@ export default function SignIn() {
         </button>
 
         <p className="mt-6 text-center text-sm text-gray-500">
-          Don’t have an account?{' '}
+          Don't have an account?{' '}
           <a href="#" className="font-medium text-indigo-600 hover:underline">
             Contact Admin
           </a>
