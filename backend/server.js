@@ -23,9 +23,7 @@ app.use(
     origin: [
       'http://localhost:5173',
       'http://localhost:3000',
-      'https://seatac-crm-frontend.vercel.app', // ← Add your actual Vercel URL here
-      'https://seatac-crm-frontend-git-main-yourname.vercel.app', // Preview deployments
-      'https://seatac-crm-frontend-yourname.vercel.app' // Production URL variants
+      'https://seatac-crm-9j94-hy3eu78p6-wbharaths-projects.vercel.app',// ← Add your actual Vercel URL here
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
